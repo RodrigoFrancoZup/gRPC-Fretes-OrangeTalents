@@ -1,0 +1,65 @@
+Expondo dados via GRPC:
+
+Agora vamos usar o Micronaut para nos ajudar com o projeto de gRPC. Vamos criar um novo projeto pelo Micronaut Lauch, com nome fretes e será do tipo gRPC Applicatio, Java na versão 11, mas a linguagem será Kotlin, com Build em Gradle e Test em Junit.
+
+Lembra que no primeiro projeto tivemos que criar um servidor? Agora bastará rodar a classe Principal que já vem com um projeto Micronaut. Antes também tivemos que criar uma classe que implementava um service e depois adicionavamos essa classe no servidor criado por nós mesmos, agora só vamos ter que criar a classe, anotá-la com @Singleton e implementar o service (o serviço declarado lá no arquivo .proto).
+
+1) Criei meu arquivo .proto:
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "br.com.edu";
+option java_outer_classname = "FretesServiceOuterClass";
+
+
+package br.com.edu;
+
+service FretesService {
+  rpc calculaFrete (FreteRequest) returns (FreteResponse) {}
+}
+
+message FreteRequest {
+  string cep = 1;
+}
+
+message FreteResponse {
+  string cep = 1;
+  double valor = 2;
+}
+
+2) Depois criei uma implementação para o FreteService descrito no .proto:
+
+@Singleton
+class FreteServiceEndpoint : FretesServiceGrpc.FretesServiceImplBase() {
+
+    private val logger = LoggerFactory.getLogger(this::class.java)
+
+    override fun calculaFrete(request: FreteRequest?, responseObserver: StreamObserver<FreteResponse>?) {
+
+        var frete = 0.0
+        var cep: String? = request!!.cep
+
+        if(!request.hasField(FreteRequest.getDescriptor().findFieldByName("cep"))){
+            cep = "Indefinido"
+        }
+
+        if(cep != "Indefinido"){
+            frete =  Random.nextDouble(from = 0.0, until =  1000.0)
+        }
+        
+        val response = FreteResponse.newBuilder()
+            .setCep(cep)
+            .setValor(frete)
+            .build()
+
+        //Log
+        logger.info("O frete será: $frete")
+
+        responseObserver?.onNext(response)
+        responseObserver?.onCompleted()
+
+    }
+}
+
+3) Por fim eu subi o servidor executando a função main() da classe que já vem com micronaut, fui na ferramenta BloomRPC, adicionei meu arquivo .proto (src/main/proto) e fiz a requisição.
